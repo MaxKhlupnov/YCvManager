@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "VmManager": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
