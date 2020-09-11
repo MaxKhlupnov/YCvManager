@@ -6,11 +6,15 @@ using System.Threading.Tasks;
 using Yandex.Cloud.Operation;
 using Microsoft.Extensions.Configuration;
 using Serilog;
+using System.Linq.Expressions;
 
 namespace VmManager.StateMachine
 {
     public class DoWorkVmState : VmState
     {
+ 
+        internal DoWorkVmState(VmState previous) : base(previous){ }
+
         public override async Task<VmState> Handle(Context context)
         {
             Log.Logger.Information($"Perfrom VM Web Service call. Current state is {this.State} ");
@@ -19,13 +23,13 @@ namespace VmManager.StateMachine
             if (this.State == VmIstanceState.Running || this.State == VmIstanceState.Calculating)
             {
                 // Запускаем обработку и ждем завершения процесса
-                VmState newState = new DoWorkVmState() { State = VmIstanceState.Running };
+                VmState newState = new DoWorkVmState(this) { State = VmIstanceState.Running };
                 this.State = VmIstanceState.Calculating;
-                string results = await RunTask(context);
+                 string results = await RunTask(context);
                 if (!string.IsNullOrEmpty(results))
                 {
                     Log.Information($"Calculation results: {results}");
-                    return new StoppingVmState() { State = VmIstanceState.Calculated };
+                    return new StoppingVmState(this) { State = VmIstanceState.Calculated };
                 }
                 else
                 {
@@ -51,14 +55,14 @@ namespace VmManager.StateMachine
            // 
            Log.Information($"Performing web serivce call to: {MakeWebServiceUrl(context)}"); 
             return "Success";
-           // Yandex.Cloud.Compute.V1.StartInstanceRequest req = new Yandex.Cloud.Compute.V1.StartInstanceRequest() { InstanceId = context.InstanceId };
-           // Operation result = await context.CloudSdk.Services.Compute.InstanceService.StartAsync(req);
-           // Log.Information($"instance id starting operation result is {result.ToString()} ");
         }
 
         private string MakeWebServiceUrl(Context context)
         {
-            return context.config.GetSection("CalculationSvc")["RestUrl"].Replace("{fqdn}", this.Fqdn);
+            var urlTemplate = this.ReplaceMacro(context.config.GetSection("CalculationSvc")["RestUrl"], this);
+          
+            string returnValue =  String.Format(urlTemplate, this.Fqdn);
+            return returnValue;
         }
     }
 }

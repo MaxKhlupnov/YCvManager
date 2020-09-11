@@ -14,13 +14,13 @@ namespace VmManager
         {
             initConfig();
             initLogger();
-            VmState state = new StartingVmState();
+            VmState state = new StartingVmState(VmIstanceState.Unspecified);
             Context context = new Context(configuration, state);
                 while(state != null)
                 {
                     state =  context.Request().GetAwaiter().GetResult();
                 };
-            
+            Log.Information("Workflow compleated");
         }
 
         private static void initConfig()

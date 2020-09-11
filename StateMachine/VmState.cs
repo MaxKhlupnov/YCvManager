@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Text;
 using Yandex.Cloud.Compute.V1;
 using Serilog;
-
+using System.Text.RegularExpressions;
+using System.Linq.Expressions;
+using System.Linq.Dynamic.Core;
 
 namespace VmManager.StateMachine
 {
@@ -39,7 +41,29 @@ namespace VmManager.StateMachine
         public VmIstanceState State { get; set; }
         public string Fqdn { get; set; }
 
-        public string[] PublicIp { get; set; }
+        public string[] IPs { get; set; }
+
+        public string PrivateIp
+        {
+            get
+            {
+                if (this.IPs != null && this.IPs.Length > 0)
+                    return this.IPs[0];
+                else
+                    return null;
+            }
+        }
+
+        public string PubllicIp
+        {
+            get
+            {
+                if (this.IPs != null && this.IPs.Length > 1)
+                    return this.IPs[this.IPs.Length];
+                else
+                    return null;
+            }
+        }
         /// <summary>
         /// Handle state
         /// </summary>
@@ -47,6 +71,18 @@ namespace VmManager.StateMachine
         /// <returns>new state</returns>
         public abstract Task<VmState> Handle(Context context);
 
+
+        protected VmState(VmIstanceState state)
+        {
+            this.State = state;
+        }
+
+        protected VmState(VmState parentState)
+        {
+            this.State = parentState.State;
+            this.Fqdn = parentState.Fqdn;
+            this.IPs = parentState.IPs;
+        }
         /**
          * Load Instance state from the cloud 
          */
@@ -58,18 +94,33 @@ namespace VmManager.StateMachine
             Instance vm = await context.CloudSdk.Services.Compute.InstanceService.GetAsync(req);
 
             VmIstanceState state = Enum.Parse<VmIstanceState>(vm.Status.ToString());
-            this.Fqdn = vm.Fqdn
-                ;
+            this.Fqdn = vm.Fqdn;
+
             List<string> ipList = new List<string>();
             foreach (NetworkInterface iface in vm.NetworkInterfaces){
                 ipList.Add(iface.PrimaryV4Address.Address);
             }
             if (ipList.Count > 0)
-                PublicIp = ipList.ToArray();
+                IPs = ipList.ToArray();
 
             Log.Information($"Instance {context.InstanceId} state is {state.ToString()}");
 
             return state;
+        }
+
+        /// <summary>
+        /// Fill temaplte based on 
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="state"></param>
+        /// <returns></returns>
+        protected string ReplaceMacro(string value, VmState state)
+        {
+            return Regex.Replace(value, @"{(?<exp>[^}]+)}", match => {
+                var p = Expression.Parameter(typeof(VmState), "state");
+                var e = DynamicExpressionParser.ParseLambda(new[] { p }, null, match.Groups["exp"].Value);
+                return (e.Compile().DynamicInvoke(state) ?? "").ToString();
+            });
         }
 
     }

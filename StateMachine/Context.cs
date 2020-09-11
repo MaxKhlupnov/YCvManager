@@ -88,6 +88,11 @@ namespace VmManager.StateMachine
                 {
                     this.InstanceState = await this.InstanceState.Handle(this);
 
+                    if (this.InstanceState == null)
+                    {
+                        break;
+                    }
+
                     System.Threading.Thread.Sleep(this.StateRefreshTime * 1000); // sleep before next check
 
                     // TODO: Add state timeout check; return TimeOutState for timeouts

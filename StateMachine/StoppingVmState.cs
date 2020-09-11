@@ -9,7 +9,7 @@ namespace VmManager.StateMachine
 {
     public class StoppingVmState : VmState
     {
-
+        internal StoppingVmState(VmState previous) : base(previous) { }
         public override async Task<VmState> Handle(Context context)
         {
             Log.Logger.Information($"Handle stopping vm state for {context.InstanceId}. Initial state is {this.State} ");

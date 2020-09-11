@@ -9,10 +9,8 @@ namespace VmManager.StateMachine
 {
     public class StartingVmState : VmState
     {
-        public StartingVmState()
-        {
-            this.State = VmIstanceState.Unspecified;
-        }
+        public StartingVmState(VmIstanceState state) : base(state) { }
+
         public override async Task<VmState> Handle(Context context)
         {
             Log.Logger.Information($"Handle starting vm state for {context.InstanceId}. Initial state is {this.State} ");
@@ -21,7 +19,7 @@ namespace VmManager.StateMachine
 
             if (this.State == VmIstanceState.Running)
             {
-                return new DoWorkVmState() { State = VmIstanceState.Running };               
+                return new DoWorkVmState(this) { State = VmIstanceState.Running };               
             }
             else if (this.State == VmIstanceState.Stopped)
             {
