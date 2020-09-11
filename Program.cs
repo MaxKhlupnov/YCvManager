@@ -1,11 +1,8 @@
 ﻿using System;
-using Yandex.Cloud.Endpoint;
-using Yandex.Cloud.Resourcemanager.V1;
-using Yandex.Cloud;
-using Yandex.Cloud.Credentials;
 using Microsoft.Extensions.Configuration;
 using System.IO;
 using Serilog;
+using VmManager.StateMachine;
 
 namespace VmManager
 {
@@ -17,13 +14,13 @@ namespace VmManager
         {
             initConfig();
             initLogger();
-            var sdk = new Sdk(new OAuthCredentialsProvider(configuration.GetSection("Yandex")["oAuth"]));
-            var response = sdk.Services.Resourcemanager.CloudService.List(new ListCloudsRequest());
-
-            foreach (var c in response.Clouds)
-            {
-                Log.Information($"* {c.Name} ({c.Id})");
-            }
+            VmState state = new StartingVmState();
+            Context context = new Context(configuration, state);
+                while(state != null)
+                {
+                    state =  context.Request().GetAwaiter().GetResult();
+                };
+            
         }
 
         private static void initConfig()
