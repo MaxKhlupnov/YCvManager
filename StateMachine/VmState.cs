@@ -40,6 +40,7 @@ namespace VmManager.StateMachine
     {
         public VmIstanceState State { get; set; }
         public string Fqdn { get; set; }
+        public string PublicIp { get; set; }
 
         public string[] IPs { get; set; }
 
@@ -54,16 +55,7 @@ namespace VmManager.StateMachine
             }
         }
 
-        public string PubllicIp
-        {
-            get
-            {
-                if (this.IPs != null && this.IPs.Length > 1)
-                    return this.IPs[this.IPs.Length];
-                else
-                    return null;
-            }
-        }
+
         /// <summary>
         /// Handle state
         /// </summary>
@@ -82,6 +74,7 @@ namespace VmManager.StateMachine
             this.State = parentState.State;
             this.Fqdn = parentState.Fqdn;
             this.IPs = parentState.IPs;
+            this.PublicIp = parentState.PublicIp;
         }
         /**
          * Load Instance state from the cloud 
@@ -97,17 +90,19 @@ namespace VmManager.StateMachine
             this.Fqdn = vm.Fqdn;
 
             List<string> ipList = new List<string>();
-            foreach (NetworkInterface iface in vm.NetworkInterfaces){
+            foreach (NetworkInterface iface in vm.NetworkInterfaces){              
                 ipList.Add(iface.PrimaryV4Address.Address);
+                if (iface.PrimaryV4Address.OneToOneNat != null)
+                    this.PublicIp = iface.PrimaryV4Address.OneToOneNat.Address;
             }
             if (ipList.Count > 0)
                 IPs = ipList.ToArray();
 
-            Log.Information($"Instance {context.InstanceId} state is {state.ToString()}");
+            Log.Information($"Instance {context.InstanceId} State: {state.ToString()} Ip:{PrivateIp}, PublicIp: {PublicIp}, Fqdn:{Fqdn}");
 
             return state;
         }
-
+         
         /// <summary>
         /// Fill temaplte based on 
         /// </summary>

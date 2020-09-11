@@ -7,6 +7,8 @@ using Yandex.Cloud.Operation;
 using Microsoft.Extensions.Configuration;
 using Serilog;
 using System.Linq.Expressions;
+using System.Net.Http;
+using System.Net.Http.Headers;
 
 namespace VmManager.StateMachine
 {
@@ -51,18 +53,25 @@ namespace VmManager.StateMachine
         /// <returns></returns>
         private async Task<string> RunTask(Context context)
         {
-           // Uri webSvcUri = new Uri(MakeWebServiceUrl(context));
-           // 
-           Log.Information($"Performing web serivce call to: {MakeWebServiceUrl(context)}"); 
-            return "Success";
+            string sUrl = MakeWebServiceUrl(context);
+            Log.Information($"Performing web serivce call to: {sUrl}");
+            
+            HttpClient client = new HttpClient();
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpResponseMessage response = await client.GetAsync(new Uri(sUrl));
+            if (response.IsSuccessStatusCode)
+                return await response.Content.ReadAsStringAsync();
+            else
+                return null;
         }
 
         private string MakeWebServiceUrl(Context context)
         {
-            var urlTemplate = this.ReplaceMacro(context.config.GetSection("CalculationSvc")["RestUrl"], this);
+            return this.ReplaceMacro(context.config.GetSection("CalculationSvc")["RestUrl"], this);
           
-            string returnValue =  String.Format(urlTemplate, this.Fqdn);
-            return returnValue;
         }
     }
 }
