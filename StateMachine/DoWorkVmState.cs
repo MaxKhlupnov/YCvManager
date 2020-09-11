@@ -55,16 +55,24 @@ namespace VmManager.StateMachine
         {
             string sUrl = MakeWebServiceUrl(context);
             Log.Information($"Performing web serivce call to: {sUrl}");
-            
-            HttpClient client = new HttpClient();
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(
-                new MediaTypeWithQualityHeaderValue("application/json"));
+            try
+            {
+                HttpClient client = new HttpClient();
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(
+                    new MediaTypeWithQualityHeaderValue("application/json"));
 
-            HttpResponseMessage response = await client.GetAsync(new Uri(sUrl));
-            if (response.IsSuccessStatusCode)
-                return await response.Content.ReadAsStringAsync();
-            else
+                HttpResponseMessage response = await client.GetAsync(new Uri(sUrl));
+                if (response.IsSuccessStatusCode)
+                    return await response.Content.ReadAsStringAsync();
+                else
+                {
+                    Log.Error($"Http response code {response.StatusCode}. Retrying....");                   
+                }
+            }catch(Exception ex)
+            {
+                Log.Error(ex, $"Http request error {ex.Message}. Retrying....");
+            }
                 return null;
         }
 
